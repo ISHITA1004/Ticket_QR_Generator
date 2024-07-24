@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ticket QR Generator and Scanner</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        input, button { margin: 10px 0; padding: 5px; }
+        #qrcode, #scanResult { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Ticket QR Generator and Scanner</h1>
+    
+    <div id="generator">
+        <h2>Generate QR Code</h2>
+        <input type="text" id="name" placeholder="Enter Name">
+        <input type="text" id="phone" placeholder="Enter Phone Number">
+        <button onclick="generateQR()">Generate QR Code</button>
+        <div id="qrcode"></div>
+    </div>
+
+    <div id="scanner">
+        <h2>Scan QR Code</h2>
+        <div id="reader"></div>
+        <div id="scanResult"></div>
+    </div>
+
+    <script>
+    async function generateQR() {
+        const name = document.getElementById('name').value;
+        const phone = document.getElementById('phone').value;
+
+        try {
+            const response = await fetch('http://localhost:8000/generate_ticket_qr', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ name, phone }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            
+            if (data.qr_code) {
+                const qrCodeDiv = document.getElementById('qrcode');
+                qrCodeDiv.innerHTML = `<img src="data:image/png;base64,${data.qr_code}" alt="Ticket QR Code">`;
+            } else {
+                throw new Error('No QR code in response');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert(`Error generating QR code: ${error.message}`);
+        }
+    }
+
+
+        function onScanSuccess(decodedText, decodedResult) {
+            document.getElementById('scanResult').innerHTML = `
+                <h3>Scan Result:</h3>
+                <p>${decodedText}</p>
+            `;
+            html5QrcodeScanner.clear();
+        }
+
+        function onScanFailure(error) {
+            console.warn(`QR code scan error: ${error}`);
+        }
+
+        let html5QrcodeScanner = new Html5QrcodeScanner(
+            "reader",
+            { fps: 10, qrbox: {width: 250, height: 250} },
+            false
+        );
+        html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+    </script>
+</body>
+</html>
